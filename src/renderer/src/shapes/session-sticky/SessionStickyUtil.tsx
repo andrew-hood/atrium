@@ -33,8 +33,8 @@ export class SessionStickyUtil extends ShapeUtil<SessionStickyShape> {
 
   override getDefaultProps(): SessionStickyShape['props'] {
     return {
-      w: 330,
-      h: 230,
+      w: 336,
+      h: 232,
       sessionId: '',
       provider: '',
       label: 'Agent session',

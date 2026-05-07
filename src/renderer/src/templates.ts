@@ -1,4 +1,4 @@
-import type { Editor } from 'tldraw';
+import { toRichText, type Editor } from 'tldraw';
 
 export interface CanvasTemplate {
   id: string;
@@ -12,6 +12,7 @@ const FRAME_H = 700;
 const GAP = 32;
 const ORIGIN_X = 80;
 const ORIGIN_Y = 80;
+const TRIAGE_FRAME_W = 380;
 
 function createColumns(editor: Editor, names: string[]): void {
   editor.run(() => {
@@ -26,7 +27,44 @@ function createColumns(editor: Editor, names: string[]): void {
   });
 }
 
+function createSessionTriage(editor: Editor): void {
+  const lanes = [
+    { name: 'Awaiting input', color: 'blue' },
+    { name: 'Running now', color: 'yellow' },
+    { name: 'Blocked / errored', color: 'red' },
+    { name: 'Done / idle', color: 'grey' },
+  ] as const;
+
+  editor.run(() => {
+    for (const [i, lane] of lanes.entries()) {
+      editor.createShape({
+        type: 'frame',
+        x: ORIGIN_X + i * (TRIAGE_FRAME_W + GAP),
+        y: ORIGIN_Y,
+        props: { w: TRIAGE_FRAME_W, h: FRAME_H, name: lane.name },
+      });
+      editor.createShape({
+        type: 'note',
+        x: ORIGIN_X + i * (TRIAGE_FRAME_W + GAP) + 24,
+        y: ORIGIN_Y + 38,
+        props: {
+          color: lane.color,
+          richText: toRichText(getLanePrompt(lane.name)),
+        },
+      });
+    }
+  });
+}
+
 export const canvasTemplates: CanvasTemplate[] = [
+  {
+    id: 'session-triage',
+    name: 'Session Triage',
+    description: 'Miro-style lanes for live agents, blockers, and done work',
+    apply(editor) {
+      createSessionTriage(editor);
+    },
+  },
   {
     id: 'kanban',
     name: 'Kanban Board',
@@ -50,3 +88,16 @@ export const canvasTemplates: CanvasTemplate[] = [
     apply() {},
   },
 ];
+
+function getLanePrompt(name: string): string {
+  switch (name) {
+    case 'Awaiting input':
+      return 'Decide, answer, unblock';
+    case 'Running now':
+      return 'Watch active work';
+    case 'Blocked / errored':
+      return 'Fix or close';
+    default:
+      return 'Archive useful outcomes';
+  }
+}

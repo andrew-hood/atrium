@@ -67,6 +67,8 @@ function CanvasIcon() {
 
 function TemplatePreview({ id }: { id: string }) {
   switch (id) {
+    case 'session-triage':
+      return <SessionTriagePreview />;
     case 'kanban':
       return <KanbanPreview />;
     case 'standup':
@@ -74,6 +76,46 @@ function TemplatePreview({ id }: { id: string }) {
     default:
       return <BlankPreview />;
   }
+}
+
+function SessionTriagePreview() {
+  const cols = [
+    { x: 2, tone: 0.28, cards: [0.32, 0.18] },
+    { x: 34, tone: 0.2, cards: [0.28] },
+    { x: 66, tone: 0.24, cards: [0.3, 0.16] },
+    { x: 98, tone: 0.12, cards: [0.18] },
+  ];
+  return (
+    <svg viewBox="0 0 128 80" fill="none">
+      {cols.map((col, ci) => (
+        <g key={ci}>
+          <rect
+            x={col.x}
+            y={2}
+            width={28}
+            height={76}
+            rx={2.5}
+            stroke="currentColor"
+            strokeWidth={0.75}
+            opacity={0.42}
+          />
+          <rect x={col.x + 4} y={8} width={20} height={8} rx={1.5} fill="currentColor" opacity={col.tone} />
+          {col.cards.map((opacity, ri) => (
+            <rect
+              key={ri}
+              x={col.x + 4}
+              y={24 + ri * 16}
+              width={20}
+              height={12}
+              rx={2}
+              fill="currentColor"
+              opacity={opacity}
+            />
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
 }
 
 function KanbanPreview() {

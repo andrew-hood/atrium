@@ -12,7 +12,8 @@ export function SessionStickyComponent({ shape }: SessionStickyComponentProps) {
   const [isEntering, setIsEntering] = useState(true);
   const prevUpdatedAt = useRef(shape.props.updatedAt);
   const props = shape.props;
-  const hasNotes = props.thoughts.trim().length > 0;
+  const preview = getSessionPreview(props);
+  const markers = getSessionMarkers(props, preview?.type);
   useElapsedTicker();
 
   useEffect(() => {
@@ -61,25 +62,79 @@ export function SessionStickyComponent({ shape }: SessionStickyComponentProps) {
 
       <section className="session-sticky__body">
         <p className="session-sticky__action">{props.lastAction}</p>
-        {props.recentPrompt ? (
-          <div className="session-sticky__prompt">
-            <span>Prompt</span>
-            <p>{props.recentPrompt}</p>
-          </div>
-        ) : null}
-        {hasNotes ? (
-          <div className="session-sticky__notes">
-            <span>Notes</span>
-            <p>{props.thoughts}</p>
+        {preview ? (
+          <div className={`session-sticky__preview session-sticky__preview--${preview.type}`}>
+            <span>{preview.label}</span>
+            <p>{preview.text}</p>
           </div>
         ) : null}
       </section>
 
       <footer className="session-sticky__footer">
         <span>{formatElapsed(props.stateChangedAt)}</span>
+        {markers.length > 0 ? (
+          <span className="session-sticky__markers" aria-label="Available session details">
+            {markers.join(' · ')}
+          </span>
+        ) : (
+          <span className="session-sticky__event">{formatEventLabel(props.lastEvent)}</span>
+        )}
       </footer>
     </article>
   );
+}
+
+type PreviewType = 'prompt' | 'response' | 'notes';
+
+function getSessionPreview(
+  props: SessionStickyShape['props']
+): { type: PreviewType; label: string; text: string } | null {
+  const recentPrompt = props.recentPrompt.trim();
+  const lastResponse = props.lastResponse.trim();
+  const notes = props.thoughts.trim();
+
+  if (props.state === 'awaiting_input' && recentPrompt) {
+    return { type: 'prompt', label: 'Waiting on', text: recentPrompt };
+  }
+
+  if ((props.state === 'errored' || props.state === 'stale') && lastResponse) {
+    return {
+      type: 'response',
+      label: props.state === 'errored' ? 'Error context' : 'Last response',
+      text: lastResponse,
+    };
+  }
+
+  if (lastResponse) {
+    return { type: 'response', label: 'Last response', text: lastResponse };
+  }
+
+  if (notes) {
+    return { type: 'notes', label: 'Notes', text: notes };
+  }
+
+  if (recentPrompt) {
+    return { type: 'prompt', label: 'Prompt', text: recentPrompt };
+  }
+
+  return null;
+}
+
+function getSessionMarkers(
+  props: SessionStickyShape['props'],
+  visiblePreviewType: PreviewType | undefined
+): string[] {
+  const markers: string[] = [];
+  if (props.recentPrompt.trim() && visiblePreviewType !== 'prompt') {
+    markers.push('Prompt saved');
+  }
+  if (props.lastResponse.trim() && visiblePreviewType !== 'response') {
+    markers.push('Response saved');
+  }
+  if (props.thoughts.trim() && visiblePreviewType !== 'notes') {
+    markers.push('Notes saved');
+  }
+  return markers.slice(0, 2);
 }
 
 function formatProviderLabel(provider: string): string {
@@ -100,4 +155,8 @@ function formatShortPath(cwd: string): string {
   const parts = cwd.split(/[\\/]+/).filter(Boolean);
   if (parts.length <= 2) return cwd;
   return `.../${parts.slice(-2).join('/')}`;
+}
+
+function formatEventLabel(event: string): string {
+  return event.replace(/([a-z])([A-Z])/g, '$1 $2');
 }

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { createShapeId, Editor, HistoryEntry, TLRecord } from 'tldraw';
+import { createShapeId, Editor, HistoryEntry, TLFrameShape, TLRecord } from 'tldraw';
 import type { Session } from '../../../shared/types';
 import { SESSION_STICKY_TYPE, type SessionStickyShape } from '../shapes/session-sticky/SessionStickyShape';
 
@@ -84,7 +84,7 @@ function upsertSessionShape(editor: Editor, session: Session, positionIndex?: nu
   }
 
   const nextPositionIndex = positionIndex ?? getSessionShapeCount(editor);
-  const { x, y } = getPositionForIndex(nextPositionIndex);
+  const { x, y } = getPositionForSession(editor, session, props, nextPositionIndex);
   editor.createShape<SessionStickyShape>({
     id,
     type: SESSION_STICKY_TYPE,
@@ -112,8 +112,8 @@ function sessionToShapeProps(
   existingProps?: SessionStickyShape['props'],
 ): SessionStickyShape['props'] {
   return {
-    w: existingProps?.w ?? 330,
-    h: existingProps?.h ?? 230,
+    w: existingProps?.w ?? 360,
+    h: existingProps?.h ?? 280,
     sessionId: session.sessionId,
     provider: session.provider ?? '',
     label: session.label,
@@ -150,9 +150,68 @@ function getSessionShapeCount(editor: Editor): number {
 
 function getPositionForIndex(index: number): { x: number; y: number } {
   return {
-    x: 80 + (index % 4) * 340,
-    y: 80 + Math.floor(index / 4) * 230,
+    x: 80 + (index % 4) * 388,
+    y: 80 + Math.floor(index / 4) * 308,
   };
+}
+
+function getPositionForSession(
+  editor: Editor,
+  session: Session,
+  props: SessionStickyShape['props'],
+  fallbackIndex: number
+): { x: number; y: number } {
+  const lane = findSessionLane(editor, session);
+  if (!lane) return getPositionForIndex(fallbackIndex);
+
+  const index = getLaneSessionCount(editor, lane, session.sessionId);
+  const padding = 24;
+  const headerOffset = 58;
+  const gap = 18;
+  const columns = Math.max(1, Math.floor((lane.props.w - padding * 2 + gap) / (props.w + gap)));
+  return {
+    x: lane.x + padding + (index % columns) * (props.w + gap),
+    y: lane.y + headerOffset + Math.floor(index / columns) * (props.h + gap),
+  };
+}
+
+function findSessionLane(editor: Editor, session: Session): TLFrameShape | null {
+  const candidates = getLaneNameCandidates(session);
+  const frames = editor.getCurrentPageShapes().filter((shape): shape is TLFrameShape => shape.type === 'frame');
+  return (
+    frames.find((frame) => {
+      const name = frame.props.name.toLowerCase();
+      return candidates.some((candidate) => name.includes(candidate));
+    }) ?? null
+  );
+}
+
+function getLaneNameCandidates(session: Session): string[] {
+  if (session.state === 'awaiting_input') return ['awaiting', 'waiting', 'input', 'review'];
+  if (session.state === 'running') return ['running', 'progress', 'doing'];
+  if (session.state === 'errored') return ['blocked', 'error', 'review'];
+  if (session.state === 'stale') return ['stale', 'paused', 'parking'];
+  return ['done', 'idle', 'closed'];
+}
+
+function getLaneSessionCount(editor: Editor, lane: TLFrameShape, incomingSessionId: string): number {
+  const laneBounds = editor.getShapePageBounds(lane.id);
+  if (!laneBounds) return 0;
+
+  return editor
+    .getCurrentPageShapes()
+    .filter((shape): shape is SessionStickyShape => shape.type === SESSION_STICKY_TYPE)
+    .filter((shape) => shape.props.sessionId !== incomingSessionId)
+    .filter((shape) => {
+      const bounds = editor.getShapePageBounds(shape.id);
+      if (!bounds) return false;
+      return (
+        bounds.x >= laneBounds.x &&
+        bounds.y >= laneBounds.y &&
+        bounds.maxX <= laneBounds.maxX &&
+        bounds.maxY <= laneBounds.maxY
+      );
+    }).length;
 }
 
 function areSessionShapePropsEqual(
