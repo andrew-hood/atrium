@@ -4,17 +4,20 @@ import 'tldraw/tldraw.css';
 import { EmptyState } from './EmptyState';
 import { IdeasPanel } from './IdeasPanel';
 import { SessionDetailsPanel } from './SessionDetailsPanel';
+import { SessionsPanel } from './SessionsPanel';
 import { useSessionUpdates } from './hooks/useSessionUpdates';
 import { customShapeUtils } from './shapes';
 import { SESSION_STICKY_TYPE, type SessionStickyShape } from './shapes/session-sticky/SessionStickyShape';
+
+type SidePanel = 'sessions' | 'ideas';
 
 export default function App() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [canvasEmpty, setCanvasEmpty] = useState(true);
   const [emptyDismissed, setEmptyDismissed] = useState(false);
   const [selectedSessionShape, setSelectedSessionShape] = useState<SessionStickyShape | null>(null);
-  const [ideasOpen, setIdeasOpen] = useState(false);
-  const [ideasCollapsed, setIdeasCollapsed] = useState(false);
+  const [sidePanel, setSidePanel] = useState<SidePanel>('sessions');
+  const [sidePanelCollapsed, setSidePanelCollapsed] = useState(false);
   useSessionUpdates(editor);
 
   useEffect(() => {
@@ -58,21 +61,23 @@ export default function App() {
     editor?.selectNone();
   }
 
-  function handleOpenIdeas() {
-    setIdeasOpen(true);
-    setIdeasCollapsed(false);
+  function handleOpenSidePanel(panel: SidePanel) {
+    setSidePanel(panel);
+    setSidePanelCollapsed(false);
   }
 
-  function handleMinimizeIdeas() {
-    setIdeasCollapsed(true);
+  function handleMinimizeSidePanel() {
+    setSidePanelCollapsed(true);
   }
 
-  const showIdeasPanel = Boolean(editor && ideasOpen && !ideasCollapsed);
-  const showIdeasRail = Boolean(editor && (!ideasOpen || ideasCollapsed));
+  const showSidePanel = Boolean(editor && !sidePanelCollapsed);
+  const showSessionsPanel = Boolean(showSidePanel && sidePanel === 'sessions');
+  const showIdeasPanel = Boolean(showSidePanel && sidePanel === 'ideas');
+  const showSideRail = Boolean(editor && sidePanelCollapsed);
   const shellClassName = [
     'atrium-shell',
-    showIdeasPanel ? 'atrium-shell--side-open' : '',
-    showIdeasRail ? 'atrium-shell--side-rail' : '',
+    showSidePanel ? 'atrium-shell--side-open' : '',
+    showSideRail ? 'atrium-shell--side-rail' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -89,16 +94,26 @@ export default function App() {
         ) : null}
       </div>
 
+      {showSessionsPanel && editor ? (
+        <SessionsPanel
+          editor={editor}
+          selectedSessionShape={selectedSessionShape}
+          onOpenIdeas={() => handleOpenSidePanel('ideas')}
+          onMinimize={handleMinimizeSidePanel}
+        />
+      ) : null}
+
       {showIdeasPanel && editor ? (
         <IdeasPanel
           editor={editor}
           selectedSessionShape={selectedSessionShape}
-          onMinimize={handleMinimizeIdeas}
+          onOpenSessions={() => handleOpenSidePanel('sessions')}
+          onMinimize={handleMinimizeSidePanel}
         />
       ) : null}
 
-      {showIdeasRail && editor ? (
-        <SideRail ideasActive={ideasOpen} onOpenIdeas={handleOpenIdeas} />
+      {showSideRail && editor ? (
+        <SideRail activePanel={sidePanel} onOpenPanel={handleOpenSidePanel} />
       ) : null}
     </main>
   );
@@ -114,24 +129,62 @@ function getSelectedSessionShape(editor: Editor): SessionStickyShape | null {
 }
 
 interface SideRailProps {
-  ideasActive: boolean;
-  onOpenIdeas: () => void;
+  activePanel: SidePanel;
+  onOpenPanel: (panel: SidePanel) => void;
 }
 
-function SideRail({ ideasActive, onOpenIdeas }: SideRailProps) {
+function SideRail({ activePanel, onOpenPanel }: SideRailProps) {
   return (
-    <aside className="atrium-side-rail" aria-label="Brainstorm panel" onPointerDown={stopCanvasEvent}>
+    <aside className="atrium-side-rail" aria-label="Panels" onPointerDown={stopCanvasEvent}>
       <button
-        className={`atrium-side-rail__button${ideasActive ? ' atrium-side-rail__button--active' : ''}`}
+        className={`atrium-side-rail__button${
+          activePanel === 'sessions' ? ' atrium-side-rail__button--active' : ''
+        }`}
+        type="button"
+        aria-label="Open sessions panel"
+        aria-pressed={activePanel === 'sessions'}
+        title="Sessions"
+        onClick={() => onOpenPanel('sessions')}
+      >
+        <SessionsIcon />
+      </button>
+      <button
+        className={`atrium-side-rail__button${
+          activePanel === 'ideas' ? ' atrium-side-rail__button--active' : ''
+        }`}
         type="button"
         aria-label="Open brainstorm panel"
-        aria-pressed={ideasActive}
+        aria-pressed={activePanel === 'ideas'}
         title="Brainstorm"
-        onClick={onOpenIdeas}
+        onClick={() => onOpenPanel('ideas')}
       >
         <BrainstormIcon />
       </button>
     </aside>
+  );
+}
+
+function SessionsIcon() {
+  return (
+    <svg
+      className="atrium-side-rail__icon"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M5.5 6.5h13M5.5 12h13M5.5 17.5h13"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3.5 6.5h.1M3.5 12h.1M3.5 17.5h.1"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

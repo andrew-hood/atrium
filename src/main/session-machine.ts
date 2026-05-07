@@ -66,7 +66,7 @@ export class SessionMachine {
           lastResponse,
           state: nextState,
           cwd: payload.cwd || existing.cwd,
-          lastAction: summarizeAction(payload, existing),
+          lastAction: summarizeAction(payload),
           lastEvent: payload.event,
           updatedAt: now,
           stateChangedAt: existing.state === nextState ? existing.stateChangedAt : now,
@@ -79,7 +79,7 @@ export class SessionMachine {
           lastResponse,
           state: nextState,
           cwd: payload.cwd,
-          lastAction: summarizeAction(payload, existing),
+          lastAction: summarizeAction(payload),
           lastEvent: payload.event,
           createdAt: now,
           updatedAt: now,
@@ -203,7 +203,6 @@ export class SessionMachine {
       const updated: Session = {
         ...session,
         state: 'stale',
-        lastAction: 'No events for 10 minutes',
         lastEvent: 'timer:stale',
         updatedAt: new Date(now).toISOString(),
         stateChangedAt: new Date(now).toISOString(),
@@ -265,7 +264,7 @@ function getNextState(current: SessionState | undefined, event: string): Session
   }
 }
 
-function summarizeAction(payload: HookEventPayload, existing: Session | null): string {
+function summarizeAction(payload: HookEventPayload): string {
   switch (payload.event) {
     case 'SessionStart':
       return 'Session started';
@@ -355,5 +354,7 @@ function isValidTtyPath(ttyPath: string): boolean {
 }
 
 function sanitizeMessage(message: string): string {
+  // Strip terminal control characters before injecting input into the session tty.
+  // eslint-disable-next-line no-control-regex
   return message.replace(/[\x00-\x09\x0b-\x1f\x7f]/g, '');
 }

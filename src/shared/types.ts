@@ -6,12 +6,19 @@ export const IPC_CHANNELS = {
   deleteSession: 'session:delete',
   attachThoughts: 'session:attachThoughts',
   sendMessage: 'session:sendMessage',
+  openSessionContext: 'session:openContext',
   sessionCreated: 'session:created',
   sessionUpdated: 'session:updated',
 } as const;
 
 export interface SendMessageResult {
   ok: boolean;
+  error?: string;
+}
+
+export interface OpenSessionContextResult {
+  ok: boolean;
+  target?: 'terminal' | 'project';
   error?: string;
 }
 
@@ -81,6 +88,7 @@ export interface AtriumAPI {
   deleteSession(sessionId: string): Promise<boolean>;
   attachThoughts(sessionId: string, thoughts: string): Promise<Session | null>;
   sendMessage(sessionId: string, message: string): Promise<SendMessageResult>;
+  openSessionContext(sessionId: string): Promise<OpenSessionContextResult>;
   onSessionCreated(listener: SessionListener): () => void;
   onSessionUpdated(listener: SessionListener): () => void;
 }

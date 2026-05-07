@@ -13,6 +13,7 @@ export const sessionStickyShapeProps = {
   w: T.number,
   h: T.number,
   sessionId: T.string,
+  provider: T.string,
   label: T.string,
   transcriptPath: T.string,
   recentPrompt: T.string,
@@ -47,6 +48,7 @@ const sessionStickyShapeVersions = createShapePropsMigrationIds(SESSION_STICKY_T
   AddRecentPrompt: 1,
   AddSessionDetails: 2,
   AddLastResponse: 3,
+  AddProvider: 4,
 });
 
 export const sessionStickyShapeMigrations = createShapePropsMigrationSequence({
@@ -71,6 +73,13 @@ export const sessionStickyShapeMigrations = createShapePropsMigrationSequence({
       id: sessionStickyShapeVersions.AddLastResponse,
       up: (props) => {
         props.lastResponse ??= '';
+      },
+      down: 'retired',
+    },
+    {
+      id: sessionStickyShapeVersions.AddProvider,
+      up: (props) => {
+        props.provider ??= '';
       },
       down: 'retired',
     },

@@ -25,7 +25,6 @@ export function SessionDetailsPanel({
   useElapsedTicker();
   const hasPrompt = props.recentPrompt.trim().length > 0;
   const hasResponse = props.lastResponse.trim().length > 0;
-  const hasThoughts = props.thoughts.trim().length > 0;
   const canSend = props.state === 'awaiting_input';
   const hasTty = props.tty.trim().length > 0;
   const isPermissionRequest = props.lastEvent === 'PermissionRequest';
@@ -71,6 +70,8 @@ export function SessionDetailsPanel({
           <p className="session-details-panel__path">{props.cwd || 'No working directory recorded.'}</p>
         </section>
 
+        <SessionLinkSection sessionId={props.sessionId} cwd={props.cwd} tty={props.tty} />
+
         {hasPrompt ? (
           <section className="session-details-panel__section">
             <h3>Prompt</h3>
@@ -85,12 +86,7 @@ export function SessionDetailsPanel({
           </section>
         ) : null}
 
-        {hasThoughts ? (
-          <section className="session-details-panel__section">
-            <h3>Notes</h3>
-            <p className="session-details-panel__copy">{props.thoughts}</p>
-          </section>
-        ) : null}
+        <SessionNotesSection sessionId={props.sessionId} notes={props.thoughts} />
       </div>
 
       {canSend ? (
@@ -101,6 +97,118 @@ export function SessionDetailsPanel({
         />
       ) : null}
     </aside>
+  );
+}
+
+interface SessionLinkSectionProps {
+  sessionId: string;
+  cwd: string;
+  tty: string;
+}
+
+function SessionLinkSection({ sessionId, cwd, tty }: SessionLinkSectionProps) {
+  const [isOpening, setIsOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasProjectPath = cwd.trim().length > 0;
+  const hasTty = tty.trim().length > 0;
+
+  async function handleOpen(): Promise<void> {
+    if (isOpening || !hasProjectPath) return;
+
+    setIsOpening(true);
+    setError(null);
+    try {
+      const result = await window.api.openSessionContext(sessionId);
+      if (!result.ok) {
+        setError(result.error ?? 'Failed to open session context');
+      }
+    } finally {
+      setIsOpening(false);
+    }
+  }
+
+  return (
+    <section className="session-details-panel__section">
+      <h3>Link</h3>
+      <div className="session-details-panel__link-card">
+        <div className="session-details-panel__link-copy">
+          <strong>{hasTty ? 'Terminal attached' : 'Project directory'}</strong>
+          <span title={hasTty ? tty : cwd}>
+            {hasTty ? tty : hasProjectPath ? cwd : 'No project path available'}
+          </span>
+        </div>
+        <button
+          className="session-details-panel__secondary-button"
+          type="button"
+          disabled={!hasProjectPath || isOpening}
+          onClick={() => void handleOpen()}
+        >
+          {isOpening ? 'Opening' : 'Open'}
+        </button>
+      </div>
+      {error ? <p className="session-details-panel__send-error">{error}</p> : null}
+    </section>
+  );
+}
+
+interface SessionNotesSectionProps {
+  sessionId: string;
+  notes: string;
+}
+
+function SessionNotesSection({ sessionId, notes }: SessionNotesSectionProps) {
+  const [draft, setDraft] = useState(notes);
+  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const hasChanges = draft.trim() !== notes.trim();
+
+  useEffect(() => {
+    setDraft(notes);
+    setStatus(null);
+  }, [notes, sessionId]);
+
+  useEffect(() => {
+    if (!status) return;
+    const timer = setTimeout(() => setStatus(null), 4000);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (isSaving || !hasChanges) return;
+
+    setIsSaving(true);
+    setStatus(null);
+    try {
+      const updated = await window.api.attachThoughts(sessionId, draft);
+      setStatus(updated ? 'Saved' : 'Session not found');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <form className="session-details-panel__section" onSubmit={(event) => void handleSubmit(event)}>
+      <h3>Notes</h3>
+      <textarea
+        className="session-details-panel__notes-input"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder="Capture decisions, risks, follow-ups, or context for this session."
+        rows={5}
+        disabled={isSaving}
+      />
+      <div className="session-details-panel__notes-actions">
+        {status ? <span>{status}</span> : null}
+        <button
+          className="session-details-panel__secondary-button"
+          type="submit"
+          disabled={!hasChanges || isSaving}
+        >
+          {isSaving ? 'Saving' : 'Save notes'}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -418,6 +526,8 @@ function renderLineBreaks(text: string, keyOffset: number): ReactNode[] {
 }
 
 function isSafeMarkdownHref(value: string | undefined): value is string {
+  // Markdown links must not contain control characters or whitespace.
+  // eslint-disable-next-line no-control-regex
   if (typeof value !== 'string' || /[\u0000-\u001f\u007f\s]/.test(value)) {
     return false;
   }

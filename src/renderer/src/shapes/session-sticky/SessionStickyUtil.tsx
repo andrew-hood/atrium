@@ -36,6 +36,7 @@ export class SessionStickyUtil extends ShapeUtil<SessionStickyShape> {
       w: 330,
       h: 230,
       sessionId: '',
+      provider: '',
       label: 'Agent session',
       transcriptPath: '',
       recentPrompt: '',
@@ -82,6 +83,7 @@ export class SessionStickyUtil extends ShapeUtil<SessionStickyShape> {
 
     const className = [
       'session-sticky__surface',
+      `session-sticky__surface--${shape.props.state}`,
       shape.props.state === 'running' && 'session-sticky__surface--running',
     ]
       .filter(Boolean)

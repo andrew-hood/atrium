@@ -7,11 +7,13 @@ import {
 } from 'react';
 import { createShapeId, type Editor, type TLNoteShape, toRichText } from 'tldraw';
 import type { Session } from '../../shared/types';
+import { useSessions } from './hooks/useSessions';
 import type { SessionStickyShape } from './shapes/session-sticky/SessionStickyShape';
 
 interface IdeasPanelProps {
   editor: Editor;
   selectedSessionShape: SessionStickyShape | null;
+  onOpenSessions: () => void;
   onMinimize: () => void;
 }
 
@@ -36,9 +38,10 @@ const NOTE_COLUMNS = 3;
 export function IdeasPanel({
   editor,
   selectedSessionShape,
+  onOpenSessions,
   onMinimize,
 }: IdeasPanelProps) {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const sessions = useSessions();
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [goal, setGoal] = useState('');
   const [waitingRequest, setWaitingRequest] = useState<WaitingRequest | null>(null);
@@ -46,26 +49,6 @@ export function IdeasPanel({
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    let disposed = false;
-
-    void window.api.listSessions().then((nextSessions) => {
-      if (!disposed) setSessions(sortSessions(nextSessions));
-    });
-
-    const syncSession = (session: Session) => {
-      setSessions((current) => upsertSession(current, session));
-    };
-    const offCreated = window.api.onSessionCreated(syncSession);
-    const offUpdated = window.api.onSessionUpdated(syncSession);
-
-    return () => {
-      disposed = true;
-      offCreated();
-      offUpdated();
-    };
-  }, []);
 
   const eligibleSessions = useMemo(
     () => sessions.filter((session) => isEligibleIdeationSession(session)),
@@ -177,6 +160,9 @@ export function IdeasPanel({
           <p className="ideas-panel__subtitle">Turn an awaiting Codex session into canvas stickies.</p>
         </div>
         <div className="ideas-panel__header-actions">
+          <button className="ideas-panel__secondary-button" type="button" onClick={onOpenSessions}>
+            Sessions
+          </button>
           <button className="ideas-panel__secondary-button" type="button" onClick={onMinimize}>
             Minimize
           </button>
@@ -413,16 +399,6 @@ function noteColorForConfidence(confidence: string): TLNoteShape['props']['color
     default:
       return 'yellow';
   }
-}
-
-function upsertSession(sessions: Session[], session: Session): Session[] {
-  const next = sessions.filter((candidate) => candidate.sessionId !== session.sessionId);
-  next.push(session);
-  return sortSessions(next);
-}
-
-function sortSessions(sessions: Session[]): Session[] {
-  return [...sessions].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
 function createRequestId(): string {

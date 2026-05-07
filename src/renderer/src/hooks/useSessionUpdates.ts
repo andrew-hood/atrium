@@ -115,6 +115,7 @@ function sessionToShapeProps(
     w: existingProps?.w ?? 330,
     h: existingProps?.h ?? 230,
     sessionId: session.sessionId,
+    provider: session.provider ?? '',
     label: session.label,
     transcriptPath: session.transcriptPath ?? '',
     recentPrompt: session.recentPrompt,
@@ -134,7 +135,7 @@ function sessionToShapeProps(
   };
 }
 
-function getSessionShapeId(sessionId: string) {
+export function getSessionShapeId(sessionId: string) {
   const encoded = Array.from(sessionId)
     .map((char) => char.charCodeAt(0).toString(16).padStart(2, '0'))
     .join('');
@@ -162,6 +163,7 @@ function areSessionShapePropsEqual(
     current.w === next.w &&
     current.h === next.h &&
     current.sessionId === next.sessionId &&
+    current.provider === next.provider &&
     current.label === next.label &&
     current.transcriptPath === next.transcriptPath &&
     current.recentPrompt === next.recentPrompt &&

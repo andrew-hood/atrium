@@ -141,5 +141,6 @@ app.on('will-quit', async () => {
   machine?.stopStalenessTimer();
   await server?.stop();
   store?.close();
+  tray?.destroy();
   tray = null;
 });

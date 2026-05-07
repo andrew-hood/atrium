@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "package": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
@@ -19,6 +20,7 @@
     "fastify": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@fontsource-variable/inter": "^5.2.8",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.0.0",
@@ -28,10 +30,13 @@
     "electron": "^41.0.0",
     "electron-builder": "^26.0.0",
     "electron-vite": "^4.0.0",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tldraw": "^4.0.0",
     "typescript": "^5.9.0",
+    "typescript-eslint": "^8.59.2",
     "vite": "^7.0.0"
   }
 }

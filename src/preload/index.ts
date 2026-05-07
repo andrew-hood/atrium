@@ -13,6 +13,7 @@ const api: AtriumAPI = {
   deleteSession: (sessionId) => ipcRenderer.invoke(IPC_CHANNELS.deleteSession, sessionId),
   attachThoughts: (sessionId, thoughts) => ipcRenderer.invoke(IPC_CHANNELS.attachThoughts, sessionId, thoughts),
   sendMessage: (sessionId, message) => ipcRenderer.invoke(IPC_CHANNELS.sendMessage, sessionId, message),
+  openSessionContext: (sessionId) => ipcRenderer.invoke(IPC_CHANNELS.openSessionContext, sessionId),
   onSessionCreated: (listener) => onSession(IPC_CHANNELS.sessionCreated, listener),
   onSessionUpdated: (listener) => onSession(IPC_CHANNELS.sessionUpdated, listener),
 };
