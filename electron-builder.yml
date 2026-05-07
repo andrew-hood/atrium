@@ -1,0 +1,17 @@
+appId: com.atrium.canvas
+productName: Atrium
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+  - from: hooks/atrium-hook.py
+    to: hooks/atrium-hook.py
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
